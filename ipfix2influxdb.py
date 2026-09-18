@@ -1,11 +1,12 @@
-#!/usr/bin/env python
+#!/root/projects/pydev/bin/python3.11
 
 import socketserver
 import ipfix.reader
 import ipfix.ie
+import json
+import os
 import sys
 from datetime import datetime,timezone
-from dateutil import parser
 import logging
 from logging.handlers import RotatingFileHandler
 import argparse
@@ -25,7 +26,8 @@ if args.spec:
 
 
 # logging with file rotation
-logfile = '/home/busr/projects/ipfix/log.log'
+cwd = os.path.dirname(os.path.abspath(__file__))
+logfile = f'{cwd}/log.log'
 
 logging.basicConfig(level=logging.DEBUG,
             handlers=[RotatingFileHandler(logfile, maxBytes=50000000, backupCount=5)],
@@ -51,7 +53,7 @@ class CollectorDictHandler(socketserver.DatagramRequestHandler):
     def handle(self):
         
         user = 'checkpoint'
-        tok = 'f7eo0Tbj0pg1rBop8kxWSW9VN3FaJ0qafqy5NEjbPhmjxkxfCpcPp7R53EtlRgh09OcpCgb_eoctOUAyCvHveQ=='
+        tok = '5aLQmk8e5yeRqsAdF5LJp-QcG2KGPX3c-E76PMNzjl5cRc_Z3GZo_ARb1Up39x-MLRezEGHa0ZdLi97l8Mv9qQ=='
         organization = 'checkpoint'
         bucket = 'ipfix'
         url = 'http://localhost:8086'
@@ -77,17 +79,18 @@ class CollectorDictHandler(socketserver.DatagramRequestHandler):
                 if key in skip:
                     break
                 else:
-                    Log.info("  %30s => %s" % (key, str(rec[key])))
+                    # Log.info("  %30s => %s" % (key, str(rec[key])))
                     tmp['fields'][key] = str(rec[key])
             
             data.append(tmp)
-            # Log.info(f"tmp Test:\n{data}")
+            # Log.debug(f"\n[Data Print]:\n{json.dumps(data, indent=4)}\n")
             
             # with InfluxDBClient(url = url, token = tok, org = organization, debug=True) as client:
             with InfluxDBClient(url = url, token = tok, org = organization) as client:
                 with client.write_api(write_options=SYNCHRONOUS) as write_api:
                     loaded = data
-                    Log.info(write_api.write(bucket, record=loaded))
+                    resp = write_api.write(bucket, record=loaded)
+                    # Log.debug(resp)
                 
 
 def end(): 
